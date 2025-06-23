@@ -8,7 +8,7 @@ import {
   GeneratedEmail,
 } from '@/lib/types';
 import { UserProfile } from '@/hooks/useUserProfile';
-import { X, Copy, RefreshCw, AlertTriangle, Check } from 'lucide-react';
+import { X, Copy, RefreshCw, AlertTriangle, Check, Mail } from 'lucide-react';
 
 interface EmailGenerationModalProps {
   isOpen: boolean;
@@ -129,6 +129,71 @@ export const EmailGenerationModal = ({
     }
   };
 
+  const handleOpenInGmail = () => {
+    console.log('🔍 Gmail button clicked');
+    console.log('📧 Generated email:', generatedEmail);
+    console.log('👤 Introducer contact:', introducerContact);
+    
+    if (!generatedEmail) {
+      console.log('❌ Missing generated email');
+      alert('No email content available. Please regenerate the email.');
+      return;
+    }
+    
+    // Option A: Send to introducer asking them to make the introduction
+    // Cast to ClosestConnection since introducerContact comes from the closest connections flow
+    const introducerEmail = (introducerContact as any)?.email || '';
+    console.log('📧 Introducer email:', introducerEmail || 'Not provided - will be blank');
+    
+    try {
+      // Gmail compose URL with the correct format that actually works
+      // Use the older but more reliable Gmail compose URL format
+      const baseUrl = 'https://mail.google.com/mail/u/0/';
+      const params = new URLSearchParams();
+      
+      params.set('view', 'cm'); // Compose mode
+      params.set('fs', '1'); // Full screen
+      
+      if (introducerEmail) {
+        params.set('to', introducerEmail);
+      }
+      params.set('su', generatedEmail.subject); // Subject
+      params.set('body', editedBody); // Body content
+      
+      const finalUrl = `${baseUrl}?${params.toString()}`;
+      console.log('🔗 Final Gmail URL:', finalUrl);
+      
+      // Try opening Gmail - don't rely on return value for popup detection
+      // Browser security often returns null even when tab opens successfully
+      window.open(finalUrl, '_blank', 'noopener,noreferrer');
+      console.log('✅ Gmail open command sent');
+      
+      // Give user feedback after a short delay
+      if (!introducerEmail) {
+        setTimeout(() => {
+          alert('Gmail should have opened! Note: The "To" field will be blank - please add the introducer\'s email address.');
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          console.log('📧 Gmail should be ready with pre-filled content');
+        }, 1000);
+      }
+      
+    } catch (error) {
+      console.error('💥 Error opening Gmail:', error);
+      
+      // Only use mailto fallback if there was an actual error
+      try {
+        console.log('🔄 Trying mailto fallback due to error');
+        const mailtoUrl = `mailto:${introducerEmail}?subject=${encodeURIComponent(generatedEmail.subject)}&body=${encodeURIComponent(editedBody)}`;
+        window.location.href = mailtoUrl;
+      } catch (mailtoError) {
+        console.error('💥 Mailto also failed:', mailtoError);
+        alert('Unable to open email client. Please copy the email manually.');
+      }
+    }
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -165,6 +230,8 @@ export const EmailGenerationModal = ({
     }
 
     if (generatedEmail) {
+      const hasIntroducerEmail = (introducerContact as any)?.email && (introducerContact as any)?.email !== 'Not found';
+      
       return (
         <div className="p-1">
           <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">Your Draft is Ready</h3>
@@ -198,6 +265,14 @@ export const EmailGenerationModal = ({
                 >
                   {hasCopied ? <Check size={18} /> : <Copy size={18} />}
                   <span>{hasCopied ? 'Copied!' : 'Copy'}</span>
+                </button>
+                 <button
+                  onClick={handleOpenInGmail}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200"
+                  title={hasIntroducerEmail ? 'Open in Gmail' : 'Open in Gmail (you\'ll need to add the recipient email)'}
+                >
+                  <Mail size={18} />
+                  <span>Open in Gmail</span>
                 </button>
                  <button
                   onClick={onClose}

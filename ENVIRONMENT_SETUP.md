@@ -5,7 +5,7 @@
 Create a `.env.local` file in your project root with the following variables:
 
 ```bash
-# Google API Key for Gemini AI (used by existing app features)
+# Google API Key for Gemini AI (used by existing app features and AI-powered network discovery)
 GEMINI_API_KEY=your_google_api_key_here
 
 # Google API Key for Stagehand (Stagehand requires this specific variable name)
@@ -29,7 +29,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=your_google_api_key_here
    touch .env.local
    ```
 
-3. **Add your API key**:
+3. **Add your API keys**:
    ```bash
    # Replace YOUR_ACTUAL_API_KEY with your real Google API key
    echo "GEMINI_API_KEY=YOUR_ACTUAL_API_KEY" >> .env.local

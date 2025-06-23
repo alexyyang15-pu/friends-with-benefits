@@ -17,6 +17,7 @@ import { EnhancedScrapingIndicator } from '@/components/ui/enhanced-scraping-ind
 import { AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { ClosestConnectionsModal } from '@/components/ui/closest-connections-modal';
+import { AIDiscoveredConnectionsModal } from '@/components/ui/ai-discovered-connections-modal';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Typewriter } from '@/components/ui/typewriter-text';
 import { EmailInputModals } from '@/components/ui/email-input-modals';
@@ -104,6 +105,10 @@ export default function Home() {
     'main' | 'uploadResume' | 'setCareerGoal'
   >('main');
 
+  // State for AI network discovery
+  const [isAIDiscoveryModalOpen, setIsAIDiscoveryModalOpen] = useState(false);
+  const [selectedFWBForDiscovery, setSelectedFWBForDiscovery] = useState<Connection | null>(null);
+
   const handleUpdateConnectionsCache = (
     introducerUrl: string,
     results: ClosestConnection[]
@@ -154,6 +159,55 @@ export default function Home() {
   const handleCloseClosestConnectionsModal = (clearContact: boolean = true) => {
     setIsClosestConnectionsModalOpen(false);
     if (clearContact) setSelectedIntroducer(null);
+  };
+
+  // AI Discovery handlers
+  const handleOpenAIDiscoveryModal = (contact: Connection) => {
+    if (!userProfile) {
+      alert(
+        "Please upload your resume (PDF) first. It's used to analyze career alignment and generate personalized introduction requests."
+      );
+      return;
+    }
+    setSelectedFWBForDiscovery(contact);
+    setIsAIDiscoveryModalOpen(true);
+  };
+
+  const handleCloseAIDiscoveryModal = () => {
+    setIsAIDiscoveryModalOpen(false);
+    setSelectedFWBForDiscovery(null);
+  };
+
+  const handleSelectDiscoveredConnectionForIntro = (
+    discoveredConnection: any, // DiscoveredConnection from AI discovery
+    fwbContact: any // FWBContact (original contact that was analyzed)
+  ) => {
+    // Safely handle name splitting - handle undefined or empty names
+    const fullName = discoveredConnection.name || 'Unknown Contact';
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Convert discovered connection to ClosestConnection format for compatibility with existing email flow
+    const targetForIntro: ClosestConnection = {
+      'First Name': firstName,
+      'Last Name': lastName,
+      Position: discoveredConnection.title || 'Unknown Position',
+      Company: discoveredConnection.company || 'Unknown Company',
+      URL: discoveredConnection.linkedinUrl || '',
+      reason: `AI discovered connection through ${fwbContact.name}: ${discoveredConnection.careerAlignment?.strategicValue?.shortTermBenefit || 'Valuable networking opportunity'}`,
+      email: discoveredConnection.email || 'Not found',
+    };
+    
+    // Set the FWB as the introducer (since they know the discovered connection)
+    setSelectedIntroducer(fwbContact);
+    
+    // Start the email flow
+    setSelectedTarget(targetForIntro);
+    setEmailFlowState('why');
+    
+    // Close AI discovery modal
+    setIsAIDiscoveryModalOpen(false);
   };
 
   const enrichSearchResults = async (results: SearchResult[]) => {
@@ -842,6 +896,7 @@ export default function Home() {
         addWarmContact={addWarmContact}
         removeWarmContact={removeWarmContact}
         onFindClosestConnections={handleOpenClosestConnectionsModal}
+        onAIDiscoverNetwork={handleOpenAIDiscoveryModal}
         hasGeneratedConnections={
           !!(
             selectedContact &&
@@ -890,6 +945,19 @@ export default function Home() {
         reasonForIntroduction={reasonForIntroduction}
         ask={askForIntroduction}
         careerObjective={careerObjective}
+      />
+      <AIDiscoveredConnectionsModal
+        isOpen={isAIDiscoveryModalOpen}
+        onClose={handleCloseAIDiscoveryModal}
+        fwbContact={selectedFWBForDiscovery ? {
+          name: `${selectedFWBForDiscovery['First Name']} ${selectedFWBForDiscovery['Last Name']}`,
+          company: selectedFWBForDiscovery.Company,
+          position: selectedFWBForDiscovery.Position,
+          linkedinUrl: selectedFWBForDiscovery.URL
+        } : null}
+        userProfile={userProfile}
+        careerObjective={careerObjective}
+        onSelectForIntroduction={handleSelectDiscoveredConnectionForIntro}
       />
     </div>
   );

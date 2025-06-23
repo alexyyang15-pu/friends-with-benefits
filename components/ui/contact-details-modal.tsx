@@ -14,6 +14,7 @@ interface ContactDetailsModalProps {
   removeWarmContact: (url: string) => void;
   onFindClosestConnections: (contact: Connection) => void;
   hasGeneratedConnections: boolean;
+  onAIDiscoverNetwork?: (contact: Connection) => void;
 }
 
 export const ContactDetailsModal = ({
@@ -24,11 +25,17 @@ export const ContactDetailsModal = ({
   removeWarmContact,
   onFindClosestConnections,
   hasGeneratedConnections,
+  onAIDiscoverNetwork,
 }: ContactDetailsModalProps) => {
   if (!contact) return null;
 
   const handleFindClosest = () => {
     onFindClosestConnections(contact);
+    onClose();
+  };
+
+  const handleAIDiscovery = () => {
+    onAIDiscoverNetwork?.(contact);
     onClose();
   };
 
@@ -89,7 +96,7 @@ export const ContactDetailsModal = ({
                   }}
                 />
               </div>
-              <div className="mt-6 w-full">
+              <div className="mt-6 w-full space-y-3">
                 <ButtonColorful
                   onClick={handleFindClosest}
                   className="w-full"
@@ -99,6 +106,13 @@ export const ContactDetailsModal = ({
                       : 'Find Closest Connections'
                   }
                 />
+                {onAIDiscoverNetwork && (
+                  <ButtonColorful
+                    onClick={handleAIDiscovery}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                    label={`🤖 AI Discover ${contact['First Name']}'s Network`}
+                  />
+                )}
               </div>
             </div>
           </motion.div>
